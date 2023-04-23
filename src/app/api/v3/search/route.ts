@@ -29,6 +29,7 @@ export async function GET(request: Request) {
 
       await client
         .from("youtube-api-cache")
+        // @ts-ignore ???
         .upsert({ id: cacheKey, cache: JSON.stringify(data) });
       return new Response(JSON.stringify(data), { status: 201 });
     } catch (err) {
@@ -36,5 +37,5 @@ export async function GET(request: Request) {
       return new Response("Something went wrong", { status: 501 });
     }
   }
-  return new Response(cache.data?.[0].cache);
+  return new Response(cache.data?.[0].cache as string);
 }
