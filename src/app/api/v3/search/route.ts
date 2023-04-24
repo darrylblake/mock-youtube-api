@@ -1,8 +1,14 @@
 import { client } from "~/app/api/client";
 import slugify from "slugify";
 
-const generateCacheKey = (q: string | null, pageToken: string | null) => {
-  return slugify(`${q}${pageToken ? pageToken : ""}`);
+const generateCacheKey = (
+  q: string | null,
+  pageToken: string | null,
+  maxResults: string | null
+) => {
+  return slugify(
+    `${q}${pageToken ? pageToken : ""}${maxResults ? maxResults : ""}`
+  );
 };
 
 const allowCorsHeaders = {
@@ -16,9 +22,12 @@ const allowCorsHeaders = {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const queryParams = new URLSearchParams(url.search);
+
   const q = queryParams.get("q");
   const pageToken = queryParams.get("pageToken");
-  const cacheKey = generateCacheKey(q, pageToken);
+  const maxResults = queryParams.get("maxResults");
+  const cacheKey = generateCacheKey(q, pageToken, maxResults);
+
   const baseUrl = "https://www.googleapis.com/youtube/v3/search";
 
   const cache = await client
