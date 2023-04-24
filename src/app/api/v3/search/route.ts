@@ -1,14 +1,10 @@
 import { client } from "~/app/api/client";
 import slugify from "slugify";
 
-const generateCacheKey = (
-  q: string | null,
-  pageToken: string | null,
-  maxResults: string | null
-) => {
-  return slugify(
-    `${q}${pageToken ? pageToken : ""}${maxResults ? maxResults : ""}`
-  );
+const maxResults = process.env.MAX_RESULTS;
+
+const generateCacheKey = (q: string | null, pageToken: string | null) => {
+  return slugify(`${q}${pageToken ? pageToken : ""}${maxResults}`);
 };
 
 const allowCorsHeaders = {
@@ -25,8 +21,7 @@ export async function GET(request: Request) {
 
   const q = queryParams.get("q");
   const pageToken = queryParams.get("pageToken");
-  const maxResults = queryParams.get("maxResults");
-  const cacheKey = generateCacheKey(q, pageToken, maxResults);
+  const cacheKey = generateCacheKey(q, pageToken);
 
   const baseUrl = "https://www.googleapis.com/youtube/v3/search";
 
@@ -40,9 +35,7 @@ export async function GET(request: Request) {
       const youtubeApiResponse = await fetch(
         `${baseUrl}?part=snippet&type=video&maxResults=50&q=${q}&key=${
           process.env.YOUTUBE_API_KEY
-        }${pageToken ? `&pageToken=${pageToken}` : ""}${
-          maxResults ? `&maxResults=${maxResults}` : ""
-        }`
+        }${pageToken ? `&pageToken=${pageToken}` : ""}&maxResults=${maxResults}`
       );
       const data = await youtubeApiResponse.json();
 
