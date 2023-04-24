@@ -40,7 +40,9 @@ export async function GET(request: Request) {
       const youtubeApiResponse = await fetch(
         `${baseUrl}?part=snippet&type=video&maxResults=50&q=${q}&key=${
           process.env.YOUTUBE_API_KEY
-        }${pageToken ? `&pageToken=${pageToken}` : ""}`
+        }${pageToken ? `&pageToken=${pageToken}` : ""}${
+          maxResults ? `&maxResults=${maxResults}` : ""
+        }`
       );
       const data = await youtubeApiResponse.json();
 
