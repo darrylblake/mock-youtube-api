@@ -1,5 +1,11 @@
 import { client } from "~/app/api/client";
 import slugify from "slugify";
+import {
+  YouTubeSearchResponse,
+  YouTubeChannelsResponse,
+  MockYouTubeResponse,
+} from "./types";
+import { allowCorsHeaders } from "./corsHeaders";
 
 const maxResults = process.env.MAX_RESULTS;
 
@@ -7,12 +13,46 @@ const generateCacheKey = (q: string | null, pageToken: string | null) => {
   return slugify(`${q}${pageToken ? pageToken : ""}${maxResults}`);
 };
 
-const allowCorsHeaders = {
-  "Access-Control-Allow-Credentials": "true",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
-  "Access-Control-Allow-Headers":
-    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+const baseUrl = "https://www.googleapis.com/youtube/v3";
+
+const getSearchResponse = async (
+  q: string | null,
+  pageToken: string | null
+): Promise<MockYouTubeResponse> => {
+  const searchResponse = await fetch(
+    `${baseUrl}/search?part=snippet&type=video&maxResults=50&q=${q}&key=${
+      process.env.YOUTUBE_API_KEY
+    }${pageToken ? `&pageToken=${pageToken}` : ""}&maxResults=${maxResults}`
+  );
+  const response: YouTubeSearchResponse = await searchResponse.json();
+
+  const items: MockYouTubeResponse["items"] = await Promise.all(
+    response.items.map(async (item) => {
+      const itemResponse = await fetch(
+        `${baseUrl}/channels?part=snippet&id=${item.snippet.channelId}&key=${process.env.YOUTUBE_API_KEY}`
+      );
+
+      const itemResponseData: YouTubeChannelsResponse =
+        await itemResponse.json();
+
+      return {
+        videoId: item.id.videoId,
+        videoThumbnail: item.snippet.thumbnails.high.url,
+        videoPublishTime: item.snippet.publishTime,
+        videoTitle: item.snippet.title,
+        channelId: itemResponseData.items[0]?.id,
+        channelThumbnail:
+          itemResponseData.items[0]?.snippet.thumbnails.medium.url,
+        channelTitle: itemResponseData.items[0]?.snippet.title,
+      };
+    })
+  );
+
+  return {
+    nextPageToken: response.nextPageToken,
+    prevPageToken: response.prevPageToken,
+    items,
+  };
 };
 
 export async function GET(request: Request) {
@@ -23,8 +63,6 @@ export async function GET(request: Request) {
   const pageToken = queryParams.get("pageToken");
   const cacheKey = generateCacheKey(q, pageToken);
 
-  const baseUrl = "https://www.googleapis.com/youtube/v3/search";
-
   const cache = await client
     .from("youtube-api-cache")
     .select("*")
@@ -32,13 +70,7 @@ export async function GET(request: Request) {
 
   if (cache.data && cache.data.length === 0) {
     try {
-      const youtubeApiResponse = await fetch(
-        `${baseUrl}?part=snippet&type=video&maxResults=50&q=${q}&key=${
-          process.env.YOUTUBE_API_KEY
-        }${pageToken ? `&pageToken=${pageToken}` : ""}&maxResults=${maxResults}`
-      );
-      const data = await youtubeApiResponse.json();
-
+      const data = await getSearchResponse(q, pageToken);
       await client
         .from("youtube-api-cache")
         // @ts-ignore ???
