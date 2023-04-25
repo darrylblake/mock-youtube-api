@@ -20,7 +20,7 @@ const getSearchResponse = async (
   pageToken: string | null
 ): Promise<MockYouTubeResponse> => {
   const searchResponse = await fetch(
-    `${baseUrl}/search?part=snippet&type=video&maxResults=50&q=${q}&key=${
+    `${baseUrl}/search?part=snippet&type=video&q=${q}&key=${
       process.env.YOUTUBE_API_KEY
     }${pageToken ? `&pageToken=${pageToken}` : ""}&maxResults=${maxResults}`
   );
