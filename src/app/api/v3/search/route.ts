@@ -81,7 +81,7 @@ export async function GET(request: Request) {
       });
     } catch (err) {
       console.error(err);
-      return new Response("Something went wrong", { status: 501 });
+      return new Response("Max requests", { status: 501 });
     }
   }
   return new Response(cache.data?.[0].cache as string, {
